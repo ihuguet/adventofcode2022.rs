@@ -1,7 +1,7 @@
-use adventofcode2022::input;
+use adventofcode2022 as aoc;
 
-pub fn run () {
-	let lines = input::read_lines("input/day02.txt");
+pub fn main() {
+	let lines = aoc::input::read_lines("day02");
 
 	let points = lines.fold((0, 0), |totals, line| {
 		let round = match line.as_str() {

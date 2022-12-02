@@ -3,7 +3,8 @@ pub mod input {
 	use std::fs::File;
 	use std::io::{BufRead, BufReader};
 
-	pub fn read_lines(filename: &str) -> impl Iterator<Item = String> {
+	pub fn read_lines(day_xx: &str) -> impl Iterator<Item = String> {
+		let filename = format!("input/{}.txt", day_xx);
 		let f = File::open(filename).unwrap();
 		let reader = BufReader::new(f);
 		reader.lines().map(|l| l.unwrap())

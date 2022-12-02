@@ -1,14 +1,12 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+use adventofcode2022 as aoc;
 
-pub fn run() {
-	let f = File::open("input/day01.txt").unwrap();
-	let reader = BufReader::new(f);
+pub fn main() {
+	let lines = aoc::input::read_lines("day01");
 
 	let mut elfs = Vec::new();
 	let mut calories = 0;
 
-	for line in reader.lines().map(|l| l.unwrap()) {
+	for line in lines {
 		if line == "" {
 			elfs.push(calories);
 			calories = 0;

@@ -4,7 +4,7 @@ Advent of Code 2022
 Advent of code puzzles using Rust
 
 ```
-cargo run DAY_NUM
+cargo run --release --bin dayXX
 ```
 
 Solves
