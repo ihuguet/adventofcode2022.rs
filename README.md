@@ -13,7 +13,7 @@ Solves
 | Day | Part 1 | Part 2 |
 | --- | --- | --- |
 |   1  | :star: | :star: |
-|   2  | :x: | :x: |
+|   2  | :star: | :star: |
 |   3  | :x: | :x: |
 |   4  | :x: | :x: |
 |   5  | :x: | :x: |

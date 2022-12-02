@@ -1,4 +1,5 @@
 mod day01;
+mod day02;
 
 use std::env;
 
@@ -8,6 +9,7 @@ fn main() {
 
 	match day {
 		1 => day01::run(),
+		2 => day02::run(),
 		_ => panic!()
 	}
 }
