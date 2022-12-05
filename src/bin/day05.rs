@@ -9,10 +9,11 @@ struct Move {
 
 fn main() {
 	let lines: Vec<String> = aoc::input::read_lines("day05").collect();
-	let split_idx = lines.iter().position(|l| l == " 1   2   3   4   5   6   7   8   9 ").unwrap();
+	let split_idx = lines.iter().position(|l| l.starts_with(" 1")).unwrap();
+	let stacks_count = lines[split_idx].split_whitespace().count();
 
-	let stacks1 = parse_stacks(&lines[..split_idx]);
-	let stacks2 = parse_stacks(&lines[..split_idx]);
+	let stacks1 = parse_stacks(&lines[..split_idx], stacks_count);
+	let stacks2 = parse_stacks(&lines[..split_idx], stacks_count);
 	let moves = parse_moves(&lines[split_idx + 2..]);
 	
 	part1(stacks1, &moves);
@@ -44,11 +45,11 @@ fn top_elems(stacks: &Vec<Vec<char>>) -> String {
 	stacks.iter().map(|stack| stack.last().unwrap()).collect()
 }
 
-fn parse_stacks(lines: &[String]) -> Vec<Vec<char>> {
-	let mut stacks = vec![vec![]; 9];
+fn parse_stacks(lines: &[String], stacks_count: usize) -> Vec<Vec<char>> {
+	let mut stacks = vec![vec![]; stacks_count];
 
 	for line in lines.iter().rev() {
-		for i in 0..9 {
+		for i in 0..stacks_count {
 			let ch = line.chars().nth(1 + i * 4).unwrap();
 			if ch != ' ' {
 				stacks[i].push(ch);
