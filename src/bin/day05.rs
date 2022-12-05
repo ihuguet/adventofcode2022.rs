@@ -8,41 +8,35 @@ struct Move {
 }
 
 fn main() {
-	let lines: Vec<String> = aoc::input::read_lines("day05").collect();
-	let split_idx = lines.iter().position(|l| l.starts_with(" 1")).unwrap();
-	let stacks_count = lines[split_idx].split_whitespace().count();
-
-	let stacks1 = parse_stacks(&lines[..split_idx], stacks_count);
-	let stacks2 = parse_stacks(&lines[..split_idx], stacks_count);
-	let moves = parse_moves(&lines[split_idx + 2..]);
-	
-	part1(stacks1, &moves);
-	part2(stacks2, &moves);
+	let (stacks, moves) = parse_input("day05");
+	println!("Part 1: top elements '{}'", solve(stacks.clone(), &moves, true));
+	println!("Part 2: top elements '{}'", solve(stacks, &moves, false));
 }
 
-fn part1(mut stacks: Vec<Vec<char>>, moves: &Vec<Move>) {
-	for mov in moves {
-		for _ in 0..mov.qty {
-			let elem = stacks[mov.from].pop().unwrap();
-			stacks[mov.to].push(elem);
-		}
-	}
-
-	println!("Part 1: top elements '{}'", top_elems(&stacks));
-}
-
-fn part2(mut stacks: Vec<Vec<char>>, moves: &Vec<Move>) {
+fn solve(mut stacks: Vec<Vec<char>>, moves: &Vec<Move>, one_by_one: bool) -> String {
 	for mov in moves {
 		let pop_idx = stacks[mov.from].len() - mov.qty as usize;
-		let elems: Vec<char> = stacks[mov.from].drain(pop_idx..).collect();
+		let mut elems: Vec<char> = stacks[mov.from].drain(pop_idx..).collect();
+		if one_by_one {
+			elems.reverse();
+		}
 		stacks[mov.to].extend(elems);
 	}
-
-	println!("Part 2: top elements '{}'", top_elems(&stacks));
+	top_elems(&stacks)
 }
 
 fn top_elems(stacks: &Vec<Vec<char>>) -> String {
 	stacks.iter().map(|stack| stack.last().unwrap()).collect()
+}
+
+fn parse_input(day_xx: &str) -> (Vec<Vec<char>>, Vec<Move>) {
+	let lines: Vec<String> = aoc::input::read_lines(day_xx).collect();
+	let split_idx = lines.iter().position(|l| l.starts_with(" 1")).unwrap();
+	let stacks_count = lines[split_idx].split_whitespace().count();
+	(
+		parse_stacks(&lines[..split_idx], stacks_count),
+		parse_moves(&lines[split_idx + 2..])
+	)
 }
 
 fn parse_stacks(lines: &[String], stacks_count: usize) -> Vec<Vec<char>> {
@@ -76,15 +70,14 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn test1() {
-		let stacks = vec![vec!['Z', 'N'], vec!['M', 'C', 'D'], vec!['P']];
-		let movs = [
-			String::from("move 1 from 2 to 1"),
-			String::from("move 3 from 1 to 3"),
-			String::from("move 2 from 2 to 1"),
-			String::from("move 1 from 1 to 2")
-		];
-		let movs = parse_moves(&movs);
-		part1(stacks, &movs);
+	fn test_part1() {
+		let (stacks, moves) = parse_input("day05-test");
+		assert_eq!(solve(stacks, &moves, true), "CMZ");
+	}
+
+	#[test]
+	fn test_part2() {
+		let (stacks, moves) = parse_input("day05-test");
+		assert_eq!(solve(stacks, &moves, false), "MCD");
 	}
 }
