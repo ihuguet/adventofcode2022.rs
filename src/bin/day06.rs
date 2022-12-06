@@ -8,8 +8,8 @@ fn main() {
 }
 
 fn find_unique_serie(signal: &[u8], len: usize) -> Option<usize> {
-	for i in 0..signal.len() - len{
-		let chars: BTreeSet<u8> = signal[i..i + len].iter().copied().collect();
+	for (i, chars) in signal.windows(len).enumerate() {
+		let chars: BTreeSet<u8> = chars.iter().copied().collect();
 		if chars.len() == len {
 			return Some(i + len);
 		}
