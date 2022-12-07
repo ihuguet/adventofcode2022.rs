@@ -29,19 +29,13 @@ fn smallest_size_to_free(root: &Dir, size: u64) -> Option<u64> {
 }
 
 fn smallest_size_gte(root: &Dir, size: u64) -> Option<u64> {
-	let mut min = if root.calc_size() >= size {
-		Some(root.calc_size())
-	} else {
-		None
-	};
+	let root_iter = std::iter::once(root.calc_size())
+		.filter(|&s| s >= size);
 
-	for child_size in root.dirs.values().filter_map(|d| smallest_size_gte(d, size)) {
-		if min.is_none() || child_size < min.unwrap() {
-			min = Some(child_size)
-		}
-	}
-
-	min
+	root.dirs.values()
+		.filter_map(|d| smallest_size_gte(d, size))
+		.chain(root_iter)
+		.min()
 }
 
 fn parse_input(day_xx: &str) -> Dir {
@@ -51,16 +45,14 @@ fn parse_input(day_xx: &str) -> Dir {
 	let mut path = vec![];
 
 	for words in lines {
-		match words[0].as_str() {
-			"$" => if words[1] == "cd" {
-				if words[2] == ".." {
-					path.pop();
-				} else {
-					path.push(words[2].to_string());
-				}
+		match (words[0].as_str(), words[1].as_str()) {
+			("$", "cd") => match words[2].as_str() {
+				".." => { path.pop(); },
+				dir  => { path.push(dir.to_string()); },
 			},
-			"dir" => root.path(&path[1..]).insert_dir(&words[1]),
-			_ => root.path(&path[1..]).insert_file(&words[1], words[0].parse().unwrap()),
+			("$", "ls")  => (),
+			("dir", dir) => root.path(&path[1..]).insert_dir(dir),
+			(size, file) => root.path(&path[1..]).insert_file(file, size.parse().unwrap()),
 		}
 	}
 
