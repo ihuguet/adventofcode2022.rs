@@ -32,15 +32,9 @@ fn rope_move(moves: &Vec<(String, i32)>, rope_size: usize) -> usize {
 			for i in 0..rope_size - 1{
 				let dx = rope[i].x - rope[i + 1].x;
 				let dy = rope[i].y - rope[i + 1].y;
-
-				let knot = &mut rope[i + 1];
-				match (dx.abs(), dy.abs()) {
-					(2, 0) => knot.x += dx / 2,
-					(0, 2) => knot.y += dy / 2,
-					(2, 1) => { knot.x += dx / 2; knot.y += dy; },
-					(1, 2) => { knot.x += dx; knot.y += dy / 2; },
-					(2, 2) => { knot.x += dx / 2; knot.y += dy / 2; },
-					_ => (),
+				if dx.abs() > 1 || dy.abs() > 1 {
+					rope[i + 1].x += dx.signum();
+					rope[i + 1].y += dy.signum();
 				}
 			}
 
