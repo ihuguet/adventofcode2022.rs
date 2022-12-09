@@ -20,7 +20,7 @@ Solves
 |   6  | :star: | :star: |
 |   7  | :star: | :star: |
 |   8  | :star: | :star: |
-|   9  | :x: | :x: |
+|   9  | :star: | :star: |
 |  10  | :x: | :x: |
 |  11  | :x: | :x: |
 |  12  | :x: | :x: |
