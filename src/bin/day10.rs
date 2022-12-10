@@ -56,14 +56,14 @@ impl Instr {
 }
 
 impl FromStr for Instr {
-	type Err = aoc::input::ParseAoCInputError;
+	type Err = aoc::input::ParseAoCInputError<Instr>;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		let words: Vec<&str> = s.split(" ").collect();
 		match words[0] {
 			"noop" => Ok(Instr::Noop),
 			"addx" => Ok(Instr::Add(words[1].parse().unwrap())),
-			instr => Err(ParseAoCInputError::new(instr)),
+			_ => Err(ParseAoCInputError::new(s)),
 		}
 	}
 }
