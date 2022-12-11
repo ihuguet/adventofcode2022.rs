@@ -22,7 +22,7 @@ Solves
 |   8  | :star: | :star: |
 |   9  | :star: | :star: |
 |  10  | :star: | :star: |
-|  11  | :x: | :x: |
+|  11  | :star: | :star: |
 |  12  | :x: | :x: |
 |  13  | :x: | :x: |
 |  14  | :x: | :x: |
