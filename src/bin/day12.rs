@@ -24,73 +24,79 @@ fn main() {
 }
 
 fn solve(grid: &Grid, start: Point, end: Point) -> Option<usize> {
+	let mut min_steps: Vec<Vec<usize>> = vec![vec![usize::MAX; grid[0].len()]; grid.len()];
+	let mut min_steps_total = usize::MAX;
 	let mut queue = BinaryHeap::new();
 	queue.push(State::new(&grid, start, 0));
-	let mut min_steps: Vec<Vec<Option<usize>>> = vec![vec![None; grid[0].len()]; grid.len()];
-	let mut min_steps_total = None;
 
 	while let Some(state) = queue.pop() {
+		if state.point == end && state.steps < min_steps_total {
+			min_steps_total = state.steps;
+		}
 		if state.point == end {
-			if min_steps_total.is_none() || state.steps < min_steps_total.unwrap() {
-				min_steps_total.replace(state.steps);
-			}
 			continue;
-		} else if min_steps_total.is_some() && min_steps_total.unwrap() <= state.cost {
+		} else if min_steps_total < state.cost {
 			break;
 		}
 
 		let max_height_next = grid[state.point].height + 1;
 		let steps_next = state.steps + 1;
-
 		let points_next = grid.adjacents_4(state.point).into_iter()
 			.filter(|&p| grid[p].height <= max_height_next)
 			.collect::<Vec<_>>();
 
 		for &point_next in points_next.iter() {
 			let prev_steps = &mut min_steps[point_next];
-			if prev_steps.is_none() || steps_next < prev_steps.unwrap() {
-				prev_steps.replace(steps_next);
+			if steps_next < *prev_steps {
+				*prev_steps = steps_next;
 				queue.push(State::new(&grid, point_next, steps_next));
 			}
 		}
 	}
 
-	min_steps_total
+	match min_steps_total {
+		usize::MAX => None,
+		_ => Some(min_steps_total),
+	}
 }
 
 fn part2(grid: &Grid, end: Point) -> Option<usize> {
-	// only 'a' terrains next to a 'b' terrain are good candidates
-	let start_candidates = grid.iter_grid().filter(|(p, _)| {
-		grid[*p].height == b'a' && grid.adjacents_4(*p).into_iter().any(|p2| grid[p2].height == b'b')
-	}).map(|(p, _)| p);
+	grid.iter_grid()
+		.filter_map(|(p, _)| to_start_candidate(grid, p))
+		.filter_map(|start| solve(grid, start, end))
+		.min()
+}
 
-	start_candidates.filter_map(|start| solve(grid, start, end)).min()
+fn to_start_candidate(grid: &Grid, point: Point) -> Option<Point> {
+	let is_a = grid[point].height == b'a';
+	let close_to_b = grid.adjacents_4(point).into_iter().any(|p| grid[p].height == b'b');
+	match is_a && close_to_b {
+		true => Some(point),
+		false => None
+	}
 }
 
 fn parse_input() -> (Grid, Point, Point) {
-	let mut input = aoc::input::read_lines("day12")
-		.map(|l| l.chars().map(|ch| Terrain {height: ch as u8, manhattan_dist: 0}).collect())
-		.collect::<Vec<_>>();
-	let mut start: Option<Point> = None;
-	let mut end: Option<Point> = None;
+	let mut start = Point::from((0, 0));
+	let mut end = Point::from((0, 0));
 
-	for (point, terrain) in input.iter_grid_mut() {
-		match terrain.height {
-			b'S' => { start = Some(point); terrain.height = b'a'; },
-			b'E' => { end = Some(point); terrain.height = b'z'; },
-			_ => () 
-		}
-		if start.is_some() && end.is_some() {
-			break;
-		}
+	let mut grid = aoc::input::read_lines("day12").enumerate()
+		.map(|(y, l)| {
+			l.chars().enumerate().map(|(x, ch)| {
+				let ch = match ch {
+					'S' => { start = Point::from((y, x)); 'a' },
+					'E' => { end = Point::from((y, x)); 'z' },
+					ch => ch,
+				};
+				Terrain {height: ch as u8, manhattan_dist: 0}
+			}).collect::<Vec<Terrain>>()
+		}).collect::<Vec<Vec<Terrain>>>();
+
+	for (point, terrain) in grid.iter_grid_mut() {
+		terrain.manhattan_dist = end.y.abs_diff(point.y) + end.x.abs_diff(point.x);
 	}
 
-	let _end = end.unwrap();
-	for (point, terrain) in input.iter_grid_mut() {
-		terrain.manhattan_dist = _end.y.abs_diff(point.y) + _end.x.abs_diff(point.x);
-	}
-
-	(input, start.unwrap(), end.unwrap())
+	(grid, start, end)
 }
 
 impl State {
