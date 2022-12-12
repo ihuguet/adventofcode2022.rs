@@ -25,17 +25,13 @@ fn main() {
 
 fn solve(grid: &Grid, start: Point, end: Point) -> Option<usize> {
 	let mut min_steps: Vec<Vec<usize>> = vec![vec![usize::MAX; grid[0].len()]; grid.len()];
-	let mut min_steps_total = usize::MAX;
 	let mut queue = BinaryHeap::new();
 	queue.push(State::new(&grid, start, 0));
 
 	while let Some(state) = queue.pop() {
-		if state.point == end && state.steps < min_steps_total {
-			min_steps_total = state.steps;
-		}
 		if state.point == end {
 			continue;
-		} else if min_steps_total < state.cost {
+		} else if min_steps[end] < state.cost {
 			break;
 		}
 
@@ -45,7 +41,7 @@ fn solve(grid: &Grid, start: Point, end: Point) -> Option<usize> {
 			.filter(|&p| grid[p].height <= max_height_next)
 			.collect::<Vec<_>>();
 
-		for &point_next in points_next.iter() {
+		for point_next in points_next {
 			let prev_steps = &mut min_steps[point_next];
 			if steps_next < *prev_steps {
 				*prev_steps = steps_next;
@@ -54,9 +50,9 @@ fn solve(grid: &Grid, start: Point, end: Point) -> Option<usize> {
 		}
 	}
 
-	match min_steps_total {
+	match min_steps[end] {
 		usize::MAX => None,
-		_ => Some(min_steps_total),
+		min => Some(min)
 	}
 }
 
@@ -68,9 +64,10 @@ fn part2(grid: &Grid, end: Point) -> Option<usize> {
 }
 
 fn to_start_candidate(grid: &Grid, point: Point) -> Option<Point> {
-	let is_a = grid[point].height == b'a';
-	let close_to_b = grid.adjacents_4(point).into_iter().any(|p| grid[p].height == b'b');
-	match is_a && close_to_b {
+	let is_a_close_to_b = grid[point].height == b'a'
+		&& grid.adjacents_4(point).into_iter().any(|p| grid[p].height == b'b');
+
+	match is_a_close_to_b {
 		true => Some(point),
 		false => None
 	}
