@@ -2,7 +2,6 @@ use adventofcode2022 as aoc;
 use std::cmp::Ordering;
 
 type Packet = Vec<Elem>;
-type PacketPair = (Packet, Packet);
 
 #[derive(Debug, PartialEq, Clone)]
 enum Elem {
@@ -11,33 +10,28 @@ enum Elem {
 }
 
 fn main() {
-	let pairs = parse_input();
-	println!("Part 1: sum of indices {}", part1(&pairs));
-	println!("Part 2: decoder key {}", part2(pairs));
+	let packets = parse_input();
+	println!("Part 1: sum of indices {}", part1(&packets));
+	println!("Part 2: decoder key {}", part2(packets));
 }
 
-fn part1(pairs: &[PacketPair]) -> u32 {
-	pairs.iter().enumerate()
-		.filter(|(_, packets)| packets_cmp(&packets.0, &packets.1) == Ordering::Less)
+fn part1(packets: &[Packet]) -> u32 {
+	packets.chunks(2).enumerate()
+		.filter(|(_, pair)| packets_cmp(&pair[0], &pair[1]) == Ordering::Less)
 		.map(|(i, _)| i as u32 + 1)
 		.sum()
 }
 
-fn part2(pairs: Vec<PacketPair>) -> u32 {
+fn part2(mut packets: Vec<Packet>) -> u32 {
 	let sep_2 = parse_packet("[[2]]").0;
 	let sep_6 = parse_packet("[[6]]").0;
 
-	let (lpackets, rpackets): (Vec<Packet>, Vec<Packet>) = pairs.into_iter().unzip();
-	let mut packets: Vec<Packet> = lpackets.into_iter()
-		.chain(rpackets.into_iter())
-		.chain([sep_2.clone(), sep_6.clone()])
-		.collect();
-
+	packets.extend([sep_2.clone(), sep_6.clone()]);
 	packets.sort_by(|a, b| packets_cmp(a, b));
-	let sep_2_idx = 1 + packets.iter().position(|packet| *packet == sep_2).unwrap();
-	let sep_6_idx = 1 + packets.iter().position(|packet| *packet == sep_6).unwrap();
+	let sep_2_idx = 1 + packets.iter().position(|pkt| *pkt == sep_2).unwrap() as u32;
+	let sep_6_idx = 1 + packets.iter().position(|pkt| *pkt == sep_6).unwrap() as u32;
 
-	sep_2_idx as u32 * sep_6_idx as u32
+	sep_2_idx * sep_6_idx
 }
 
 fn packets_cmp(lpacket: &[Elem], rpacket: &[Elem]) -> Ordering {
@@ -57,9 +51,11 @@ fn packets_cmp(lpacket: &[Elem], rpacket: &[Elem]) -> Ordering {
 	lpacket.len().cmp(&rpacket.len())
 }
 
-fn parse_input() -> Vec<PacketPair> {
-	let lines: Vec<String> = aoc::input::read_lines("day13").collect();
-	lines.chunks(3).map(|lx2| (parse_packet(&lx2[0]).0, parse_packet(&lx2[1]).0)).collect()
+fn parse_input() -> Vec<Packet> {
+	aoc::input::read_lines("day13")
+		.filter(|l| !l.is_empty())
+		.map(|l| parse_packet(&l).0)
+		.collect()
 }
 
 fn parse_packet(packet_str: &str) -> (Packet, usize) {
@@ -69,8 +65,8 @@ fn parse_packet(packet_str: &str) -> (Packet, usize) {
 	while idx < packet_str.len() {
 		let (elem, end) = match packet_str.as_bytes()[idx] {
 			b'[' => {
-				let (packet, end) = parse_packet(&packet_str[idx..]);
-				(Elem::List(packet), idx + end)
+				let (packet, size) = parse_packet(&packet_str[idx..]);
+				(Elem::List(packet), idx + size)
 			},
 			b'0'..=b'9' => {
 				let end = idx + packet_str[idx..].find(&[',', ']']).unwrap();
