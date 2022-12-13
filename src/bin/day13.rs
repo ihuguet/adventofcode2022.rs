@@ -1,5 +1,6 @@
 use adventofcode2022 as aoc;
 use std::cmp::Ordering;
+use Elem::*;
 
 type Packet = Vec<Elem>;
 
@@ -37,10 +38,10 @@ fn part2(mut packets: Vec<Packet>) -> u32 {
 fn packets_cmp(lpacket: &[Elem], rpacket: &[Elem]) -> Ordering {
 	for elem_pair in std::iter::zip(lpacket, rpacket) {
 		let ord = match elem_pair {
-			(Elem::Num(lnum), Elem::Num(rnum)) => lnum.cmp(&rnum),
-			(Elem::List(llist), Elem::List(rlist)) => packets_cmp(&llist, &rlist),
-			(Elem::List(llist), Elem::Num(rnum)) => packets_cmp(&llist, &[Elem::Num(*rnum)]),
-			(Elem::Num(lnum), Elem::List(rlist)) => packets_cmp(&[Elem::Num(*lnum)], &rlist),
+			(Num(lnum),   Num(rnum))   => lnum.cmp(&rnum),
+			(List(llist), List(rlist)) => packets_cmp(&llist, &rlist),
+			(List(llist), rnum_elem)   => packets_cmp(&llist, &[rnum_elem.clone()]),
+			(lnum_elem,   List(rlist)) => packets_cmp(&[lnum_elem.clone()], &rlist),
 		};
 		match ord {
 			Ordering::Less | Ordering::Greater => return ord,
@@ -66,11 +67,11 @@ fn parse_packet(packet_str: &str) -> (Packet, usize) {
 		let (elem, end) = match packet_str.as_bytes()[idx] {
 			b'[' => {
 				let (packet, size) = parse_packet(&packet_str[idx..]);
-				(Elem::List(packet), idx + size)
+				(List(packet), idx + size)
 			},
 			b'0'..=b'9' => {
 				let end = idx + packet_str[idx..].find(&[',', ']']).unwrap();
-				(Elem::Num(packet_str[idx..end].parse().unwrap()), end)
+				(Num(packet_str[idx..end].parse().unwrap()), end)
 			},
 			b']' if packet.len() == 0 => {  // empty packet is valid
 				return (packet, idx + 1);
@@ -98,32 +99,24 @@ fn parse_packet(packet_str: &str) -> (Packet, usize) {
 mod test {
 	use super::*;
 
-	fn n(num: u32) -> Elem {
-		Elem::Num(num)
-	}
-
-	fn l(list: Vec<Elem>) -> Elem {
-		Elem::List(list)
-	}
-
 	#[test]
 	fn test_parse_packet_ints() {
 		let packet_str = "[1,1,3,1,1]";
-		let expect = vec![n(1), n(1), n(3), n(1), n(1)];
+		let expect = vec![Num(1), Num(1), Num(3), Num(1), Num(1)];
 		assert_eq!(parse_packet(packet_str).0, expect);
 	}
 
 	#[test]
 	fn test_parse_packet_mix() {
 		let packet_str = "[[4,4],4,4]";
-		let expect = vec![l(vec![n(4), n(4)]), n(4), n(4)];
+		let expect = vec![List(vec![Num(4), Num(4)]), Num(4), Num(4)];
 		assert_eq!(parse_packet(packet_str).0, expect);
 	}
 
 	#[test]
 	fn test_parse_packet_empty() {
 		let packet_str = "[[]]";
-		let expect = vec![l(Vec::new())];
+		let expect = vec![List(Vec::new())];
 		assert_eq!(parse_packet(packet_str).0, expect);
 	}
 }
