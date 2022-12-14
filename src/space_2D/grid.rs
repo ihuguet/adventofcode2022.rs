@@ -1,6 +1,6 @@
-use super::Point;
+use super::point::{Point, Coord};
 
-pub trait Grid<T: Copy> {
+pub trait Grid<T: Coord> {
 	type Item;
 
 	/// check if point is valid index and the Grid has an entry for it
