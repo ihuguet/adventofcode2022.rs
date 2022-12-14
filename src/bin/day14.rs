@@ -55,16 +55,13 @@ fn next_pos(grid: &VecGrid<Material>, pos: Point, max_y: Option<usize>) -> Optio
 		return None;
 	}
 
-	let left = pos.add_signed((1, -1).into());
-	let center = pos.add_signed((1, 0).into());
-	let right = pos.add_signed((1, 1).into());
-
-	match (grid[center], grid[left], grid[right]) {
-		(Air, _l, _r) => Some(center),
-		(_c, Air, _r) => Some(left),
-		(_c, _l, Air) => Some(right),
-		(_c, _l, _r)  => None,
-	}
+	[(1, 0), (1, -1), (1, 1)].into_iter().find_map(|t| {
+		let next = pos.add_signed(t.into());
+		match grid[next] {
+			Air => Some(next),
+			_   => None
+		}
+	})
 }
 
 fn calc_max_rock_y(grid: &VecGrid<Material>) -> Option<usize> {
