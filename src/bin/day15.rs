@@ -26,25 +26,26 @@ fn main() {
 }
 
 fn part1(sensors: &[Sensor], line_num: isize) -> usize {
-	let line_chunks = get_line_scanned_ranges(sensors, line_num);
+	let scanned_ranges = get_line_scanned_ranges(sensors, line_num);
 
-	let chunks_sum = line_chunks.iter()
+	let scanned_points_count = scanned_ranges.iter()
 		.map(|range| (range.end() - range.start() + 1) as usize)
 		.sum::<usize>();
 	let line_beacons = sensors.iter()
-		.filter_map(|sensor| if sensor.beacon.y == line_num {Some(sensor.beacon.x)} else {None})
+		.filter(|sensor| sensor.beacon.y == line_num)
+		.map(|sensor| sensor.beacon.x)
 		.collect::<BTreeSet<_>>();
-	let beacons_sub = line_beacons.iter()
-		.filter(|beacon| line_chunks.iter().any(|chunk| chunk.contains(beacon)))
+	let beacons_count = line_beacons.iter()
+		.filter(|beacon| scanned_ranges.iter().any(|range| range.contains(beacon)))
 		.count();
 
-	chunks_sum - beacons_sub
+	scanned_points_count - beacons_count
 }
 
 fn part2(sensors: &[Sensor], search_size: isize) -> u64 {
 	for line in 0..=search_size {
-		let line_chunks = get_line_scanned_ranges(sensors, line);
-		let unscanned_points = get_line_unscanned_points(&line_chunks, search_size);
+		let scanned_ranges = get_line_scanned_ranges(sensors, line);
+		let unscanned_points = get_line_unscanned_points(&scanned_ranges, search_size);
 
 		if !unscanned_points.is_empty() {
 			return unscanned_points[0] as u64 * 4000000 + line as u64
@@ -55,57 +56,54 @@ fn part2(sensors: &[Sensor], search_size: isize) -> u64 {
 }
 
 fn get_line_scanned_ranges(sensors: &[Sensor], line_num: isize) -> Vec<RangeInclusive<isize>> {
-	let mut chunks = Vec::new();
+	let mut ranges = Vec::new();
 
 	for sensor in sensors {
 		let beacon_rel = sensor.pos - sensor.beacon;
 		let max_dist = beacon_rel.x.abs() + beacon_rel.y.abs();
 		let x_diff = max_dist - (line_num - sensor.pos.y).abs();
 		if x_diff >= 0 {
-			chunks.push((sensor.pos.x - x_diff, sensor.pos.x + x_diff));
+			ranges.push((sensor.pos.x - x_diff, sensor.pos.x + x_diff));
 		}
 	}
 
-	chunks.sort();
-	let chunks_merged = chunks.into_iter().fold(Vec::new(), chunk_append);
-	chunks_merged
+	ranges.sort();
+	ranges.into_iter().fold(Vec::new(), range_append_merging)
 }
 
-fn chunk_append(mut chunks: Vec<RangeInclusive<isize>>, chunk: (isize, isize)) -> Vec<RangeInclusive<isize>>{
-	let chunk = chunk.0..=chunk.1;
+fn range_append_merging(mut ranges_merged: Vec<RangeInclusive<isize>>, range: (isize, isize))
+	-> Vec<RangeInclusive<isize>>
+{
+	let range = range.0..=range.1;
 
-	if let Some(prev) = chunks.pop() {
-		if can_merge(&prev, &chunk) {
-			let chunk = (*prev.start().min(chunk.start()), *prev.end().max(chunk.end()));
-			return chunk_append(chunks, chunk);
+	if let Some(prev) = ranges_merged.pop() {
+		if can_merge(&prev, &range) {
+			let range = (*prev.start().min(range.start()), *prev.end().max(range.end()));
+			return range_append_merging(ranges_merged, range);
 		}
-		chunks.push(prev);
+		ranges_merged.push(prev);
 	}
 
-	chunks.push(chunk);
-	chunks
+	ranges_merged.push(range);
+	ranges_merged
 }
 
-fn can_merge(chunk1: &RangeInclusive<isize>, chunk2: &RangeInclusive<isize>) -> bool {
-	chunk1.contains(chunk2.start()) || chunk1.contains(chunk2.end())
-	|| chunk2.contains(chunk1.start()) || chunk2.contains(chunk1.end())
-	|| chunk1.end() + 1 == *chunk2.start() || chunk2.start() + 1 == *chunk1.end()
+fn can_merge(range1: &RangeInclusive<isize>, range2: &RangeInclusive<isize>) -> bool {
+	range1.contains(range2.start()) || range1.contains(range2.end())
+	|| range2.contains(range1.start()) || range2.contains(range1.end())
+	|| range1.end() + 1 == *range2.start() || range2.start() + 1 == *range1.end()
 }
 
-fn get_line_unscanned_points(line_chunks: &Vec<RangeInclusive<isize>>, line_size: isize) -> Vec<isize> {
-	let mut points = Vec::new();
-	let scanned_start = *line_chunks[0].start();
-	let scanned_end = *line_chunks.last().unwrap().end();
+fn get_line_unscanned_points(scanned_ranges: &Vec<RangeInclusive<isize>>, line_size: isize)
+	-> Vec<isize>
+{
+	let scanned_start = *scanned_ranges[0].start();
+	let scanned_end = *scanned_ranges.last().unwrap().end();
+	let mut points: Vec<isize> = (0..scanned_start).chain(scanned_end + 1..=line_size).collect();
 
-	for x in 0..scanned_start {
-		points.push(x);
-	}
-	for x in scanned_end + 1..=line_size {
-		points.push(x);
-	}
-	for chunks_pair in line_chunks.windows(2) {
-		let unscanned_start = *chunks_pair[0].end() + 1;
-		let unscanned_end = *chunks_pair[1].start();
+	for ranges in scanned_ranges.windows(2) {
+		let unscanned_start = *ranges[0].end() + 1;
+		let unscanned_end = *ranges[1].start();
 		for x in unscanned_start..unscanned_end {
 			points.push(x);
 		}
@@ -126,14 +124,13 @@ impl FromStr for Sensor {
 			static ref RE: Regex = Regex::new(r"^Sensor at x=(-?\d+), y=(-?\d+): closest beacon is at x=(-?\d+), y=(-?\d+)$").unwrap();
 		}
 
-		if let Some(cap) = RE.captures_iter(s).next() {
-			Ok(Sensor {
+		match RE.captures_iter(s).next() {
+			Some(cap) => Ok(Sensor {
 				pos: Point::from((cap[2].parse()?, cap[1].parse()?)),
 				beacon: Point::from((cap[4].parse()?, cap[3].parse()?))
-			})
-		} else {
-			Err(ParseAoCInputError::new(s))
-		}		
+			}),
+			None => Err(ParseAoCInputError::new(s))
+		}
 	}
 }
 
