@@ -35,11 +35,8 @@ fn part1(sensors: &[Sensor], line_num: isize) -> usize {
 		.filter(|sensor| sensor.beacon.y == line_num)
 		.map(|sensor| sensor.beacon.x)
 		.collect::<BTreeSet<_>>();
-	let beacons_count = line_beacons.iter()
-		.filter(|beacon| scanned_ranges.iter().any(|range| range.contains(beacon)))
-		.count();
 
-	scanned_points_count - beacons_count
+	scanned_points_count - line_beacons.len()
 }
 
 fn part2(sensors: &[Sensor], search_size: isize) -> u64 {
