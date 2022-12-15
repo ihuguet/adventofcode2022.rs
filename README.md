@@ -26,7 +26,7 @@ Solves
 |  12  | :star: | :star: |
 |  13  | :star: | :star: |
 |  14  | :star: | :star: |
-|  15  | :x: | :x: |
+|  15  | :star: | :star: |
 |  16  | :x: | :x: |
 |  17  | :x: | :x: |
 |  18  | :x: | :x: |

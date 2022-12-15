@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::num::ParseIntError;
 use std::str::FromStr;
 use std::fmt;
 
@@ -82,21 +83,35 @@ where
 /// Error type that can be used by `impl FromStr for MyType`
 pub struct ParseAoCInputError<T> {
 	wrong_str: String,
-	data_type: std::marker::PhantomData<T>
+	custom_msg: Option<String>,
+	data_type: std::marker::PhantomData<T>,
 }
 
 impl<T> ParseAoCInputError<T> {
 	pub fn new(wrong_str: &str) -> Self {
 		ParseAoCInputError {
 			wrong_str: String::from(wrong_str),
-			data_type: std::marker::PhantomData
+			custom_msg: None,
+			data_type: std::marker::PhantomData,
+		}
+	}
+
+	pub fn new_custom(custom_msg: &str) -> Self {
+		ParseAoCInputError {
+			wrong_str: String::new(),
+			custom_msg: Some(String::from(custom_msg)),
+			data_type: std::marker::PhantomData,
 		}
 	}
 }
 
 impl<T> fmt::Display for ParseAoCInputError<T> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "Can't parse '{}' to type '{}'", &self.wrong_str, std::any::type_name::<T>())
+		if let Some(msg) = &self.custom_msg {
+			write!(f, "{}", msg)
+		} else {
+			write!(f, "Can't parse '{}' to type '{}'", &self.wrong_str, std::any::type_name::<T>())
+		}
 	}
 }
 
@@ -104,4 +119,12 @@ impl<T> fmt::Debug for ParseAoCInputError<T> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		<Self as fmt::Display>::fmt(&self, f)
 	}
+}
+
+impl<T> From<ParseIntError> for ParseAoCInputError<T> {
+fn from(err: ParseIntError) -> Self {
+	let msg = format!("ParseIntError (kind {:?}) while trying to parse to type '{}'",
+	                  err.kind(), std::any::type_name::<T>());
+	ParseAoCInputError::new_custom(&msg)
+}
 }
