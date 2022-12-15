@@ -122,9 +122,9 @@ impl<T> fmt::Debug for ParseAoCInputError<T> {
 }
 
 impl<T> From<ParseIntError> for ParseAoCInputError<T> {
-fn from(err: ParseIntError) -> Self {
-	let msg = format!("ParseIntError (kind {:?}) while trying to parse to type '{}'",
-	                  err.kind(), std::any::type_name::<T>());
-	ParseAoCInputError::new_custom(&msg)
-}
+	fn from(err: ParseIntError) -> Self {
+		let msg = format!("ParseIntError (kind {:?}) while trying to parse to type '{}'",
+						err.kind(), std::any::type_name::<T>());
+		ParseAoCInputError::new_custom(&msg)
+	}
 }
