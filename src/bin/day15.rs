@@ -28,7 +28,8 @@ fn main() {
 fn part1(sensors: &[Sensor], line_num: isize) -> usize {
 	let scanned_ranges = get_line_scanned_ranges(sensors, line_num);
 
-	let scanned_points_count = scanned_ranges.iter()
+	let scanned_points_count = scanned_ranges.into_iter()
+		.fold(Vec::new(), range_append_merging).into_iter()
 		.map(|range| (range.end() - range.start() + 1) as usize)
 		.sum::<usize>();
 	let line_beacons = sensors.iter()
@@ -42,17 +43,16 @@ fn part1(sensors: &[Sensor], line_num: isize) -> usize {
 fn part2(sensors: &[Sensor], search_size: isize) -> u64 {
 	for line in 0..=search_size {
 		let scanned_ranges = get_line_scanned_ranges(sensors, line);
-		let unscanned_points = get_line_unscanned_points(&scanned_ranges, search_size);
 
-		if !unscanned_points.is_empty() {
-			return unscanned_points[0] as u64 * 4000000 + line as u64
+		if let Some(pos) = find_line_unscanned_point(&scanned_ranges, search_size) {
+			return pos as u64 * 4000000 + line as u64
 		}
 	}
 
 	panic!("Expected 1 point, found 0");
 }
 
-fn get_line_scanned_ranges(sensors: &[Sensor], line_num: isize) -> Vec<RangeInclusive<isize>> {
+fn get_line_scanned_ranges(sensors: &[Sensor], line_num: isize) -> Vec<(isize, isize)> {
 	let mut ranges = Vec::new();
 
 	for sensor in sensors {
@@ -65,7 +65,7 @@ fn get_line_scanned_ranges(sensors: &[Sensor], line_num: isize) -> Vec<RangeIncl
 	}
 
 	ranges.sort();
-	ranges.into_iter().fold(Vec::new(), range_append_merging)
+	ranges
 }
 
 fn range_append_merging(mut ranges_merged: Vec<RangeInclusive<isize>>, range: (isize, isize))
@@ -91,22 +91,20 @@ fn can_merge(range1: &RangeInclusive<isize>, range2: &RangeInclusive<isize>) -> 
 	|| range1.end() + 1 == *range2.start() || range2.start() + 1 == *range1.end()
 }
 
-fn get_line_unscanned_points(scanned_ranges: &Vec<RangeInclusive<isize>>, line_size: isize)
-	-> Vec<isize>
+fn find_line_unscanned_point(scanned_ranges: &Vec<(isize, isize)>, line_size: isize)
+	-> Option<isize>
 {
-	let scanned_start = *scanned_ranges[0].start();
-	let scanned_end = *scanned_ranges.last().unwrap().end();
-	let mut points: Vec<isize> = (0..scanned_start).chain(scanned_end + 1..=line_size).collect();
-
-	for ranges in scanned_ranges.windows(2) {
-		let unscanned_start = *ranges[0].end() + 1;
-		let unscanned_end = *ranges[1].start();
-		for x in unscanned_start..unscanned_end {
-			points.push(x);
+	let mut pos = 0;
+	for range in scanned_ranges {
+		if pos >= range.0 && pos <= range.1 {
+			pos = range.1 + 1;
 		}
 	}
 
-	points
+	match pos {
+		pos if pos <= line_size => Some(pos),
+		_ => None
+	}
 }
 
 fn parse_input(day_xx: &str) -> Vec<Sensor> {
