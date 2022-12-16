@@ -8,7 +8,6 @@ struct Valve {
 	distances: Vec<usize>
 }
 
-#[derive(Debug)]
 struct StatePart1 {
 	id: usize,
 	unvisited: HashSet<usize>,
@@ -20,8 +19,7 @@ struct StatePart2 {
 	destinations: [(usize, usize); 2], // (id, dist)
 	unvisited: HashSet<usize>,
 	minutes: i32,
-	pressure: i32, 
-	paths: (Vec<usize>, Vec<usize>)
+	pressure: i32,
 }
 
 fn main() {
@@ -32,11 +30,11 @@ fn main() {
 	println!("Part 2: max released pressure {}", part2(&valves, id_start, &ids_with_flow));
 }
 
-fn precompute(valves: &mut [Valve], id_start: usize) -> Vec<usize> {
+fn precompute(valves: &mut [Valve], id_start: usize) -> HashSet<usize> {
 	let ids_with_flow = valves.iter().enumerate()
 		.filter(|(_i, v)| v.flow > 0)
 		.map(|(i, _v)| i)
-		.collect::<Vec<_>>();
+		.collect::<HashSet<_>>();
 
 	valves[id_start].distances = calc_distances_from(&valves, id_start);
 	for &valve_id in &ids_with_flow {
@@ -65,11 +63,11 @@ fn calc_distances_from(valves: &[Valve], id: usize) -> Vec<usize> {
 	distances
 }
 
-fn part1(valves: &[Valve], id_start: usize, ids_with_flow: &[usize]) -> i32 {
+fn part1(valves: &[Valve], id_start: usize, ids_with_flow: &HashSet<usize>) -> i32 {
 	let mut max_pressure = 0;
 	let mut queue = vec![StatePart1 {
 		id: id_start,
-		unvisited: ids_with_flow.into_iter().copied().collect(),
+		unvisited: ids_with_flow.clone(),
 		minutes: 30,
 		pressure: 0 
 	}];
@@ -118,97 +116,81 @@ fn best_potential_pressure_part1(valves: &[Valve], unvisited: &HashSet<usize>, f
 		.sum()
 }
 
-fn part2(valves: &[Valve], id_start: usize, ids_with_flow: &[usize]) -> i32 {
+fn part2(valves: &[Valve], id_start: usize, ids_with_flow: &HashSet<usize>) -> i32 {
 	let mut max_pressure = 0;
 	let mut queue = vec![StatePart2 {
 		destinations: [(id_start, 0), (id_start, 0)],
-		unvisited: ids_with_flow.into_iter().copied().collect(),
+		unvisited: ids_with_flow.clone(),
 		minutes: 27,  // +1 minute to compensate the first `minutes -= 1`
 		pressure: 0,
-		paths: (vec![], vec![]) 
 	}];
 
 	while let Some(state) = queue.pop() {
-		let StatePart2 { destinations, unvisited, mut minutes, mut pressure, mut paths } = state;
-		let (id0, dist0) = destinations[0];
-		let (id1, dist1) = destinations[1];
+		let StatePart2 { destinations, unvisited, mut minutes, mut pressure} = state; 
+		let (id_dest0, mut dist0) = destinations[0];
+		let (id_dest1, mut dist1) = destinations[1];
+		let open_valve0 = dist0 == 0;
+		let open_valve1 = dist1 == 0;
 
 		minutes -= 1;
-		if dist0 == 0 {
-			pressure += valves[id0].flow * minutes;
-			paths.0.push(id0);
+		match open_valve0 {
+			true  => pressure += valves[id_dest0].flow * minutes,
+			false => dist0 -= 1,  // distance while the other opens his valve
 		}
-		if dist1 == 0 {
-			pressure += valves[id1].flow * minutes;
-			paths.1.push(id1);
+		match open_valve1 {
+			true  => if id_dest0 != id_dest1 || !open_valve0 {  // avoid opening valve at the same time
+				pressure += valves[id_dest1].flow * minutes
+			},
+			false => dist1 -= 1,  // idem
 		}
 		if pressure > max_pressure {
 			max_pressure = pressure;
 		}
 
-		let best_pressure = pressure +
-			best_potential_pressure_part2(valves, &unvisited, (id0, dist0), (id1, dist1), minutes);
-		if best_pressure <= max_pressure {
+		let is_last = unvisited.is_empty() && id_dest0 == id_dest1;
+		let best_pressure = pressure + optimistic_potential_pressure_part2(valves, &unvisited, (id_dest0, open_valve0), (id_dest1, open_valve1), minutes);
+		if is_last || best_pressure <= max_pressure {
 			continue;
 		}
 
-		let next_dests = match (dist0, dist1) {
-			(0, 0) => {
+		let next_dests = match (open_valve0, open_valve1) {
+			(true, true) => {
 				unvisited.iter()
 					.permutations(2)
 					.map(|ids| (*ids[0], *ids[1]))
 					.collect::<Vec<_>>()
 			},
-			(0, _) => {
+			(true, false) if !unvisited.is_empty() => {
 				std::iter::zip(
 					unvisited.iter().copied(),
-					std::iter::repeat(id1)
+					std::iter::repeat(id_dest1)
 				).collect::<Vec<_>>()
 			},
-			(_, 0) => {
+			(false, true) if !unvisited.is_empty() => {
 				std::iter::zip(
-					std::iter::repeat(id0),
+					std::iter::repeat(id_dest0),
 					unvisited.iter().copied()
 				).collect::<Vec<_>>()
 			},
-			_ => panic!("Error in the program, one of the dists must be 0")
+			(true, false) => {
+				vec![(id_dest1, id_dest1)]
+			},
+			(false, true) => {
+				vec![(id_dest0, id_dest0)]
+			},
+			(false, false) => {
+				panic!("Error in the program: at least one should open a valve");
+			},
 		};
 
-		// last valve to visit
-		if next_dests.is_empty() && (dist0 != 0 || dist1 != 0) {
-			let dist0_next = match dist0 {
-				0 => valves[id0].distances[id1],
-				d => d - 1 // -1 is distance during this last minute
-			};
-			let dist1_next = match dist1 {
-				0 => valves[id1].distances[id0],
-				d => d - 1 // -1 is distance during this last minute
-			};
-			let id_next = match dist0 {
-				0 => id1,
-				_ => id0,
-			};
-
-			let minutes_next = minutes - dist0_next.min(dist1_next) as i32 - 1;
-			if minutes_next >= 0 {
-				let pressure_next = pressure + valves[id_next].flow * minutes_next;
-				if pressure_next > max_pressure {
-					max_pressure = pressure_next;
-					assert_eq!(unvisited.is_empty(), true);
-				}
-			}
-			
-			continue;
-		}
-
 		for (id0_next, id1_next) in next_dests {
-			let mut dist0_next = match id0 == id0_next {
-				true  => dist0 - 1,  // -1 is distance during this last minute
-				false => valves[id0].distances[id0_next]
+			let mut dist0_next = match open_valve0 {
+				true  => valves[id_dest0].distances[id0_next],
+				false => dist0,
 			};
-			let mut dist1_next = match id1 == id1_next {
-				true  => dist1 - 1,  // -1 is distance during this last minute
-				false => valves[id1].distances[id1_next]
+			let mut dist1_next = match open_valve1 {
+				true  => valves[id_dest1].distances[id1_next],
+				false => dist1,
 			};
 
 			let min_dist = dist0_next.min(dist1_next);
@@ -229,7 +211,6 @@ fn part2(valves: &[Valve], id_start: usize, ids_with_flow: &[usize]) -> i32 {
 				unvisited: unvisited_next,
 				minutes: minutes_next,
 				pressure,
-				paths: paths.clone()
 			});
 		}
 	}
@@ -237,22 +218,22 @@ fn part2(valves: &[Valve], id_start: usize, ids_with_flow: &[usize]) -> i32 {
 	max_pressure
 }
 
-fn best_potential_pressure_part2(valves: &[Valve], unvisited: &HashSet<usize>,
-	dest0: (usize, usize), dest1: (usize, usize), minutes: i32)
+fn optimistic_potential_pressure_part2(valves: &[Valve], unvisited: &HashSet<usize>,
+	(id_dest0, open_valve0): (usize, bool), (id_dest1, open_valve1): (usize, bool), minutes: i32)
 	-> i32
 {
 	let mut unvisited = unvisited.clone();
-	if dest0.1 != 0 {
-		unvisited.insert(dest0.0);
+	if !open_valve0 {  // if not openned, it's also missing
+		unvisited.insert(id_dest0);
 	}
-	if dest1.1 != 0 {
-		unvisited.insert(dest1.0);
+	if !open_valve1 {  // idem
+		unvisited.insert(id_dest1);
 	}
 
 	unvisited.iter()
 		.filter_map(|id| {
-			let from0 = valves[*id].flow * (minutes - 1 - valves[dest0.0].distances[*id] as i32);
-			let from1 = valves[*id].flow * (minutes - 1 - valves[dest1.0].distances[*id] as i32);
+			let from0 = valves[*id].flow * (minutes - 1 - valves[id_dest0].distances[*id] as i32);
+			let from1 = valves[*id].flow * (minutes - 1 - valves[id_dest1].distances[*id] as i32);
 			let pressure = from0.max(from1);
 			match pressure {
 				0.. => Some(pressure),
