@@ -1,6 +1,6 @@
 use adventofcode2022 as aoc;
+use itertools::Itertools;
 use std::collections::{HashSet, HashMap};
-// use itertools::Itertools;
 
 struct Valve {
 	flow: i32,
@@ -9,11 +9,19 @@ struct Valve {
 }
 
 #[derive(Debug)]
-struct State {
+struct StatePart1 {
 	id: usize,
 	unvisited: HashSet<usize>,
 	minutes: i32,
 	pressure: i32,
+}
+
+struct StatePart2 {
+	destinations: [(usize, usize); 2], // (id, dist)
+	unvisited: HashSet<usize>,
+	minutes: i32,
+	pressure: i32, 
+	paths: (Vec<usize>, Vec<usize>)
 }
 
 fn main() {
@@ -21,6 +29,7 @@ fn main() {
 	let ids_with_flow = precompute(&mut valves, id_start);
 
 	println!("Part 1: max released pressure {}", part1(&valves, id_start, &ids_with_flow));
+	println!("Part 2: max released pressure {}", part2(&valves, id_start, &ids_with_flow));
 }
 
 fn precompute(valves: &mut [Valve], id_start: usize) -> Vec<usize> {
@@ -58,7 +67,7 @@ fn calc_distances_from(valves: &[Valve], id: usize) -> Vec<usize> {
 
 fn part1(valves: &[Valve], id_start: usize, ids_with_flow: &[usize]) -> i32 {
 	let mut max_pressure = 0;
-	let mut queue = vec![State {
+	let mut queue = vec![StatePart1 {
 		id: id_start,
 		unvisited: ids_with_flow.into_iter().copied().collect(),
 		minutes: 30,
@@ -66,7 +75,7 @@ fn part1(valves: &[Valve], id_start: usize, ids_with_flow: &[usize]) -> i32 {
 	}];
 
 	while let Some(state) = queue.pop() {
-		let State {
+		let StatePart1 {
 			id: id_prev, unvisited: unvisited_prev, minutes: minutes_prev, pressure: pressure_prev
 		} = state;
 
@@ -87,8 +96,11 @@ fn part1(valves: &[Valve], id_start: usize, ids_with_flow: &[usize]) -> i32 {
 				let mut unvisited = unvisited_prev.clone();
 				unvisited.remove(&id);
 
-				if !unvisited.is_empty() { // && pressure + best_pressure > max_pressure {
-					queue.push(State {id, minutes, unvisited, pressure});
+				let best_pressure = pressure +
+					best_potential_pressure_part1(valves, &unvisited, id, minutes);
+
+				if !unvisited.is_empty() && pressure + best_pressure > max_pressure {
+					queue.push(StatePart1 {id, minutes, unvisited, pressure});
 				}
 			}
 		}
@@ -97,13 +109,158 @@ fn part1(valves: &[Valve], id_start: usize, ids_with_flow: &[usize]) -> i32 {
 	max_pressure
 }
 
-// fn best_potential_pressure(valves: &[Valve], unvisited: &HashSet<usize>, from: usize, minutes: i32)
-// 	-> i32
-// {
-// 	unvisited.into_iter().map(|id| {
-// 		valves[*id].flow * (minutes - 1 - valves[from].distances[*id] as i32)
-// 	}).sum()
-// }
+fn best_potential_pressure_part1(valves: &[Valve], unvisited: &HashSet<usize>, from: usize, minutes: i32)
+	-> i32
+{
+	unvisited.iter()
+		.map(|id| valves[*id].flow * (minutes - 1 - valves[from].distances[*id] as i32))
+		.filter(|v| *v > 0)
+		.sum()
+}
+
+fn part2(valves: &[Valve], id_start: usize, ids_with_flow: &[usize]) -> i32 {
+	let mut max_pressure = 0;
+	let mut queue = vec![StatePart2 {
+		destinations: [(id_start, 0), (id_start, 0)],
+		unvisited: ids_with_flow.into_iter().copied().collect(),
+		minutes: 27,  // +1 minute to compensate the first `minutes -= 1`
+		pressure: 0,
+		paths: (vec![], vec![]) 
+	}];
+
+	while let Some(state) = queue.pop() {
+		let StatePart2 { destinations, unvisited, mut minutes, mut pressure, mut paths } = state;
+		let (id0, dist0) = destinations[0];
+		let (id1, dist1) = destinations[1];
+
+		minutes -= 1;
+		if dist0 == 0 {
+			pressure += valves[id0].flow * minutes;
+			paths.0.push(id0);
+		}
+		if dist1 == 0 {
+			pressure += valves[id1].flow * minutes;
+			paths.1.push(id1);
+		}
+		if pressure > max_pressure {
+			max_pressure = pressure;
+		}
+
+		let best_pressure = pressure +
+			best_potential_pressure_part2(valves, &unvisited, (id0, dist0), (id1, dist1), minutes);
+		if best_pressure <= max_pressure {
+			continue;
+		}
+
+		let next_dests = match (dist0, dist1) {
+			(0, 0) => {
+				unvisited.iter()
+					.permutations(2)
+					.map(|ids| (*ids[0], *ids[1]))
+					.collect::<Vec<_>>()
+			},
+			(0, _) => {
+				std::iter::zip(
+					unvisited.iter().copied(),
+					std::iter::repeat(id1)
+				).collect::<Vec<_>>()
+			},
+			(_, 0) => {
+				std::iter::zip(
+					std::iter::repeat(id0),
+					unvisited.iter().copied()
+				).collect::<Vec<_>>()
+			},
+			_ => panic!("Error in the program, one of the dists must be 0")
+		};
+
+		// last valve to visit
+		if next_dests.is_empty() && (dist0 != 0 || dist1 != 0) {
+			let dist0_next = match dist0 {
+				0 => valves[id0].distances[id1],
+				d => d - 1 // -1 is distance during this last minute
+			};
+			let dist1_next = match dist1 {
+				0 => valves[id1].distances[id0],
+				d => d - 1 // -1 is distance during this last minute
+			};
+			let id_next = match dist0 {
+				0 => id1,
+				_ => id0,
+			};
+
+			let minutes_next = minutes - dist0_next.min(dist1_next) as i32 - 1;
+			if minutes_next >= 0 {
+				let pressure_next = pressure + valves[id_next].flow * minutes_next;
+				if pressure_next > max_pressure {
+					max_pressure = pressure_next;
+					assert_eq!(unvisited.is_empty(), true);
+				}
+			}
+			
+			continue;
+		}
+
+		for (id0_next, id1_next) in next_dests {
+			let mut dist0_next = match id0 == id0_next {
+				true  => dist0 - 1,  // -1 is distance during this last minute
+				false => valves[id0].distances[id0_next]
+			};
+			let mut dist1_next = match id1 == id1_next {
+				true  => dist1 - 1,  // -1 is distance during this last minute
+				false => valves[id1].distances[id1_next]
+			};
+
+			let min_dist = dist0_next.min(dist1_next);
+			let minutes_next = minutes - min_dist as i32;
+			dist0_next -= min_dist;
+			dist1_next -= min_dist;
+
+			if minutes_next <= 0 {
+				continue;
+			}
+
+			let mut unvisited_next = unvisited.clone();
+			unvisited_next.remove(&id0_next);
+			unvisited_next.remove(&id1_next);
+
+			queue.push(StatePart2 {
+				destinations: [(id0_next, dist0_next), (id1_next, dist1_next)],
+				unvisited: unvisited_next,
+				minutes: minutes_next,
+				pressure,
+				paths: paths.clone()
+			});
+		}
+	}
+
+	max_pressure
+}
+
+fn best_potential_pressure_part2(valves: &[Valve], unvisited: &HashSet<usize>,
+	dest0: (usize, usize), dest1: (usize, usize), minutes: i32)
+	-> i32
+{
+	let mut unvisited = unvisited.clone();
+	if dest0.1 != 0 {
+		unvisited.insert(dest0.0);
+	}
+	if dest1.1 != 0 {
+		unvisited.insert(dest1.0);
+	}
+
+	unvisited.iter()
+		.filter_map(|id| {
+			let from0 = valves[*id].flow * (minutes - 1 - valves[dest0.0].distances[*id] as i32);
+			let from1 = valves[*id].flow * (minutes - 1 - valves[dest1.0].distances[*id] as i32);
+			let pressure = from0.max(from1);
+			match pressure {
+				0.. => Some(pressure),
+				_   => None
+			}
+		})
+		.sum()
+}
 
 fn parse_input(day_xx: &str) -> (Vec<Valve>, usize) {
 	let mut ids_map = HashMap::new();
@@ -147,5 +304,12 @@ mod tests {
 		let (mut valves, id_start) = parse_input("day16-test");
 		let ids_with_flow = precompute(&mut valves, id_start);
 		assert_eq!(part1(&valves, id_start, &ids_with_flow), 1651);
+	}
+
+	#[test]
+	fn test_part2() {
+		let (mut valves, id_start) = parse_input("day16-test");
+		let ids_with_flow = precompute(&mut valves, id_start);
+		assert_eq!(part2(&valves, id_start, &ids_with_flow), 1707);
 	}
 }
