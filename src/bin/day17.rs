@@ -10,7 +10,7 @@ const DOWN: Point<isize> = Point {y: -1, x: 0};
 #[derive(PartialEq)]
 struct Shape(Vec<Vec<bool>>);
 
-type State = (usize, Vec<bool>);
+type State = (usize, usize, Vec<bool>);
 
 struct Tower {
 	grid: VecGrid<bool>,
@@ -40,7 +40,7 @@ impl Tower {
 
 	fn solve(jet_pattern: &[Point<isize>], shapes: &[Shape], limit: usize) -> usize {
 		let mut tower = Tower::new();
-		let mut jets_iter = jet_pattern.iter().copied().cycle();
+		let mut jets_iter = jet_pattern.iter().copied().enumerate().cycle();
 		let mut shapes_iter = shapes.into_iter().enumerate().cycle();
 
 		let (mut shape_n, mut shape) = shapes_iter.next().unwrap();
@@ -48,7 +48,7 @@ impl Tower {
 
 		while tower.rocks_count < limit {
 			// left/right
-			let mov = jets_iter.next().unwrap();
+			let (mov_n, mov) = jets_iter.next().unwrap();
 			if let Ok(mov) = tower.check_move(shape, pos, mov) {
 				pos = pos.add_signed(mov);
 			}
@@ -58,7 +58,7 @@ impl Tower {
 				pos = pos.add_signed(mov);
 			} else {
 				tower.place_shape(shape, pos);
-				tower.maybe_fast_advance(limit, shape_n);
+				tower.maybe_fast_advance(limit, shape_n, mov_n);
 
 				(shape_n, shape) = shapes_iter.next().unwrap();
 				pos = tower.prepare_next_rock_and_get_pos();
@@ -106,8 +106,8 @@ impl Tower {
 		self.rocks_count += 1;
 	}
 
-	fn maybe_fast_advance(&mut self, rocks_limit: usize, shape_n: usize) {
-		if let Some(state) = self.get_state(shape_n) {
+	fn maybe_fast_advance(&mut self, rocks_limit: usize, shape_n: usize, mov_n: usize) {
+		if let Some(state) = self.get_state(shape_n, mov_n) {
 			if self.states.contains_key(&state) {
 				let (prev_rocks, prev_height) = self.states[&state];
 				let left = rocks_limit - self.rocks_count;
@@ -119,17 +119,16 @@ impl Tower {
 
 			self.states.insert(state, (self.rocks_count, self.height));
 		}
-
 	}
 
-	fn get_state(&self, shape_n: usize) -> Option<State> {
-		if self.height >= 100 {
-			let top: Vec<bool> = self.grid[self.height - 100..self.height].iter()
+	fn get_state(&self, shape_n: usize, mov_n: usize) -> Option<State> {
+		if self.height >= 20 {
+			let top: Vec<bool> = self.grid[self.height - 20..self.height].iter()
 				.flatten()
 				.map(|v| *v)
 				.collect();
 
-			Some((shape_n, top))
+			Some((shape_n, mov_n, top))
 		} else {
 			None
 		}
