@@ -43,8 +43,7 @@ impl Tower {
 		let mut jets_iter = jet_pattern.iter().copied().enumerate().cycle();
 		let mut shapes_iter = shapes.into_iter().enumerate().cycle();
 
-		let (mut shape_n, mut shape) = shapes_iter.next().unwrap();
-		let mut pos = tower.prepare_next_rock_and_get_pos();
+		let (mut pos, mut shape_n, mut shape) = tower.prepare_next_rock(&mut shapes_iter);
 
 		while tower.rocks_count < limit {
 			// left/right
@@ -59,23 +58,26 @@ impl Tower {
 			} else {
 				tower.place_shape(shape, pos);
 				tower.maybe_fast_advance(limit, shape_n, mov_n);
-
-				(shape_n, shape) = shapes_iter.next().unwrap();
-				pos = tower.prepare_next_rock_and_get_pos();
+				(pos, shape_n, shape) = tower.prepare_next_rock(&mut shapes_iter);
 			}
 		}
 
 		tower.height + tower.height_sum
 	}
 
-	fn prepare_next_rock_and_get_pos(&mut self) -> Point {
+	fn prepare_next_rock<'a>(&mut self, shapes_iter: &mut impl Iterator<Item = (usize, &'a Shape)>)
+		-> (Point, usize, &'a Shape)
+	{
 		let pos = Point::from((self.height + 3, 2));
+		let (shape_n, shape) = shapes_iter.next().unwrap();
+		self.reserve_for_height(pos.y + shape.height());
+		(pos, shape_n, shape)
+	}
 
-		while self.grid.len() < pos.y + 4 {
+	fn reserve_for_height(&mut self, height: usize) {
+		while self.grid.len() < height {
 			self.grid.push(vec![false; TOWER_WIDTH]);
 		}
-
-		pos
 	}
 
 	fn check_move(&self, shape: &Shape, pos: Point, mov: Point<isize>) -> Result<Point<isize>, ()> {
