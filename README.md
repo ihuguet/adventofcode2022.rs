@@ -29,7 +29,7 @@ Solves
 |  15  | :star: | :star: |
 |  16  | :star: | :star: |
 |  17  | :star: | :star: |
-|  18  | :x: | :x: |
+|  18  | :star: | :star: |
 |  19  | :x: | :x: |
 |  20  | :x: | :x: |
 |  21  | :x: | :x: |
