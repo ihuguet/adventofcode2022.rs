@@ -14,7 +14,7 @@ enum Material {
 
 struct Blueprint([[i32; 4]; 4]);  // i = robot type, j = qty of required material
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct State {
 	robots: [i32; 4],
 	materials: [i32; 4],
@@ -59,28 +59,21 @@ fn solve(blueprint: &Blueprint, max_minutes: i32) -> i32 {
 
 		for next_robot in next_robots {
 			let minutes_inc = blueprint.minutes_to_build(next_robot, &state).min(left_minutes);
-			let minutes = state.minutes + minutes_inc;
 
-			let mut materials = state.materials.clone();
-			for (idx, qty) in materials.iter_mut().enumerate() {
-				*qty += minutes_inc * state.robots[idx];
+			let mut state = state.clone();
+			state.minutes += minutes_inc;
+			state.collect_materials(minutes_inc);
+			state.create_robot(next_robot, blueprint);
+
+			if state.materials[Geode as usize] > max_geodes {
+				max_geodes = state.materials[Geode as usize];
 			}
 
-			if materials[Geode as usize] > max_geodes {
-				max_geodes = materials[Geode as usize];
-			}
-
-			if minutes >= max_minutes {
+			if state.minutes >= max_minutes {
 				continue;
 			}
 
-			let mut robots = state.robots.clone();
-			robots[next_robot as usize] += 1;
-			for (idx, qty) in materials.iter_mut().enumerate() {
-				*qty -= blueprint.0[next_robot as usize][idx];
-			}
-
-			queue.push(State {robots, materials, minutes});
+			queue.push(state);
 		}
 	}
 	
@@ -128,6 +121,21 @@ impl Blueprint {
 			left / robot_num
 		} else {
 			left / robot_num + 1
+		}
+	}
+}
+
+impl State {
+	fn collect_materials(&mut self, minutes_inc: i32) {
+		for (idx, qty) in self.materials.iter_mut().enumerate() {
+			*qty += minutes_inc * self.robots[idx];
+		}
+	}
+
+	fn create_robot(&mut self, robot: Material, blueprint: &Blueprint) {
+		self.robots[robot as usize] += 1;
+		for (idx, qty) in self.materials.iter_mut().enumerate() {
+			*qty -= blueprint.0[robot as usize][idx];
 		}
 	}
 }
