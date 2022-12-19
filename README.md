@@ -30,7 +30,7 @@ Solves
 |  16  | :star: | :star: |
 |  17  | :star: | :star: |
 |  18  | :star: | :star: |
-|  19  | :x: | :x: |
+|  19  | :star: | :star: |
 |  20  | :x: | :x: |
 |  21  | :x: | :x: |
 |  22  | :x: | :x: |
