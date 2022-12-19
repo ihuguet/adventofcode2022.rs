@@ -55,13 +55,11 @@ fn solve(blueprint: &Blueprint, max_minutes: i32) -> i32 {
 		}
 
 		let next_robots = blueprint.get_next_robots(&state.robots);
+		let left_minutes = max_minutes - state.minutes;
 
 		for next_robot in next_robots {
-			let mut minutes_inc = blueprint.minutes_to_build(next_robot, &state);
-
-			if state.minutes + minutes_inc >= max_minutes {
-				minutes_inc = max_minutes - state.minutes;
-			}
+			let minutes_inc = blueprint.minutes_to_build(next_robot, &state).min(left_minutes);
+			let minutes = state.minutes + minutes_inc;
 
 			let mut materials = state.materials.clone();
 			for (idx, qty) in materials.iter_mut().enumerate() {
@@ -72,7 +70,7 @@ fn solve(blueprint: &Blueprint, max_minutes: i32) -> i32 {
 				max_geodes = materials[Geode as usize];
 			}
 
-			if state.minutes + minutes_inc >= max_minutes {
+			if minutes >= max_minutes {
 				continue;
 			}
 
@@ -82,7 +80,7 @@ fn solve(blueprint: &Blueprint, max_minutes: i32) -> i32 {
 				*qty -= blueprint.0[next_robot as usize][idx];
 			}
 
-			queue.push(State {robots, materials, minutes: state.minutes + minutes_inc});
+			queue.push(State {robots, materials, minutes});
 		}
 	}
 	
