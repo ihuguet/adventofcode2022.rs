@@ -92,6 +92,7 @@ impl Blueprint {
 	fn get_next_robots(&self, robots: &[i32; 4]) -> Vec<Material> {
 		[Ore, Clay, Obsidian, Geode].into_iter()
 			.filter(|material| self.can_build_robot(robots, *material))
+			.filter(|robot_type| !self.has_enough_robots(robots, *robot_type))
 			.collect()
 	}
 
@@ -102,6 +103,18 @@ impl Blueprint {
 			}
 		}
 		true
+	}
+
+	fn has_enough_robots(&self, robots: &[i32; 4], robot_type: Material) -> bool {
+		if robot_type == Geode {
+			return false;
+		}
+
+		let enough_count = self.0.iter()
+			.map(|robot_recipe| robot_recipe[robot_type as usize])
+			.max().unwrap();
+
+		robots[robot_type as usize] >= enough_count
 	}
 
 	fn minutes_to_build(&self, robot: Material, state: &State) -> i32 {
