@@ -31,7 +31,7 @@ Solves
 |  17  | :star: | :star: |
 |  18  | :star: | :star: |
 |  19  | :star: | :star: |
-|  20  | :x: | :x: |
+|  20  | :star: | :star: |
 |  21  | :x: | :x: |
 |  22  | :x: | :x: |
 |  23  | :x: | :x: |
