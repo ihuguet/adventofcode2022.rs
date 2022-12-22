@@ -28,9 +28,7 @@ fn main() {
 	println!("Part1: result {}", solve(&map, dirs.clone(), &wrap));
 
 	let mappings = create_cube_wrap();
-	let wrap_cube = move |_m: &Vec<Vec<u8>>, traveler: Traveler| -> Traveler {
-		mappings[&traveler]
-	};
+	let wrap_cube = move |_: &_, traveler| mappings[&traveler];
 	println!("Part2: result {}", solve(&map, dirs, &wrap_cube));
 }
 
