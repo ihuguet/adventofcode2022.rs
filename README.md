@@ -33,7 +33,7 @@ Solves
 |  19  | :star: | :star: |
 |  20  | :star: | :star: |
 |  21  | :star: | :star: |
-|  22  | :x: | :x: |
+|  22  | :star: | :star: |
 |  23  | :x: | :x: |
 |  24  | :x: | :x: |
 |  25  | :x: | :x: |
