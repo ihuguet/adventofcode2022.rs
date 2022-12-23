@@ -89,7 +89,7 @@ fn parse_input() -> (Grid, Point, Point) {
 			}).collect::<Vec<Terrain>>()
 		}).collect::<Vec<Vec<Terrain>>>();
 
-	for (point, terrain) in grid.iter_grid_mut() {
+	for (point, terrain) in <Grid as GridTrait<usize>>::iter_grid_mut(&mut grid) {
 		terrain.manhattan_dist = end.y.abs_diff(point.y) + end.x.abs_diff(point.x);
 	}
 
