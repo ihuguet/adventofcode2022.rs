@@ -2,14 +2,14 @@ use std::ops::*;
 use std::fmt;
 
 /// trait used to limit T in Point<T> to isize and usize only
-pub trait Coord: Copy {}
+pub trait Coord: Copy + Default {}
 impl Coord for isize {}
 impl Coord for usize {}
 
 /// coordenates of a 2D grid
 /// note that if thinking in rows and columns, Y are the rows and X are the
 /// columns. So, Point::from((y, x)) means Point::from((row, col))
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Point<T: Coord = usize> {
 	pub y: T,
 	pub x: T,
